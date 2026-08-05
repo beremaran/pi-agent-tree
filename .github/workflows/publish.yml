@@ -66,6 +66,11 @@ jobs:
     needs: guard
     runs-on: ubuntu-latest
 
+    # `secrets` is not available in step-level `if:` conditions, so the token
+    # presence is evaluated at the job level and referenced via `env`.
+    env:
+      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
+
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
@@ -170,7 +175,7 @@ jobs:
         # npm publish needs a valid NPM_TOKEN secret. Without it (e.g. first
         # push before the maintainer adds the token), the workflow skips the
         # publish but still creates the GitHub Release below.
-        if: ${{ secrets.NPM_TOKEN != '' }}
+        if: ${{ env.HAS_NPM_TOKEN }}
         run: npm publish
 
       - name: Create GitHub Release
