@@ -1,15 +1,22 @@
 /**
- * @beremaran/pi-agent-tree — force pi to act as an orchestrator.
+ * @beremaran/pi-agent-tree — turn pi into an orchestrator on demand.
  *
- * Port of @beremaran/opencode-agent-tree. Every user request is decomposed
- * into subtasks and delegated to subagents via a `task` tool; the orchestrator
- * never does hands-on work (its hands-on tools are hard-blocked by default).
+ * Port of @beremaran/opencode-agent-tree. When orchestrator mode is enabled,
+ * every user request is decomposed into subtasks and delegated to subagents
+ * via a `task` tool; the orchestrator never does hands-on work (its hands-on
+ * tools are hard-blocked).
+ *
+ * Mode is **off by default**: the extension is inert until enabled with
+ * `Ctrl+Shift+Tab`, `/agent-tree on`, or `PI_AGENT_TREE_MODE=on`. `Shift+Tab`
+ * is also registered and takes effect once pi's `app.thinking.cycle` binding
+ * is moved (pi reserves `Shift+Tab` for it).
  *
  * Configuration is read from JSON files (merged, project wins when trusted):
  * - ~/.pi/agent/pi-agent-tree.json   (global)
  * - <cwd>/.pi/pi-agent-tree.json     (project-local)
  *
- * Enforcement layers (mirroring the opencode plugin):
+ * Enforcement layers (mirroring the opencode plugin, active only while the
+ * mode is on):
  * 1. System prompt directive — installed via `before_agent_start` on the
  *    top-level session only (marker-guarded, appended once).
  * 2. Hard tool block — blocked tools are physically removed from the active
@@ -24,6 +31,7 @@ import { existsSync, readFileSync } from "node:fs"
 import { join } from "node:path"
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent"
 import { CONFIG_DIR_NAME, getAgentDir } from "@earendil-works/pi-coding-agent"
+import { Key } from "@earendil-works/pi-tui"
 import { discoverAgents, formatAgentList } from "./agents.ts"
 import { LEVEL1_DIRECTIVE_MARKER, orchestratorDirective } from "./directive.ts"
 import {
@@ -34,11 +42,22 @@ import {
   normalizeOptions,
   PLUGIN_ID,
 } from "./options.ts"
-import { levelContextFromEnv, PI_CONFIG_ENV, PI_ROLE_ENV, routedTargets, taskTool } from "./subagent.ts"
+import {
+  levelContextFromEnv,
+  PI_CONFIG_ENV,
+  PI_MODE_ENV,
+  PI_ROLE_ENV,
+  routedTargets,
+  taskTool,
+} from "./subagent.ts"
 
 const CONFIG_FILE = "pi-agent-tree.json"
 const STATE_ENTRY_TYPE = "agent-tree"
-const MODE_ENV = "PI_AGENT_TREE_MODE"
+
+/** Keys the toggle is registered on. `shift+tab` only wins once the user
+ *  rebinds pi's `app.thinking.cycle` away from it (it is a reserved built-in
+ *  binding and extension shortcuts conflicting with it are skipped). */
+const TOGGLE_KEYS = [Key.ctrlShift("tab"), Key.shift("tab")] as const
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
@@ -97,7 +116,9 @@ const loadConfig = (cwd: string, trusted: boolean): Record<string, unknown> => {
 
 export const OrchestratorExtension = (pi: ExtensionAPI): void => {
   let opts: NormalizedOptions | null = null
-  let modeOn = true
+  // The mode is OFF by default: the extension stays inert (no directive, no
+  // tool removal, no blocking, `task` refuses) until the user enables it.
+  let modeOn = false
   /** Active toolset captured before the orchestrator block, restored on off. */
   let toolsBeforeOrchestrator: string[] | undefined
 
@@ -152,6 +173,65 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
     if (isTopLevelProcess()) pi.appendEntry(STATE_ENTRY_TYPE, { modeOn })
   }
 
+  /**
+   * Best-effort switches the session model to `orchestratorModel` when the
+   * mode is on. Only meaningful at the top level; spawned orchestrator levels
+   * receive their model via the `--model` spawn flag instead.
+   */
+  const applyOrchestratorModel = async (ctx: ExtensionContext | ExtensionCommandContext): Promise<void> => {
+    const state = opts
+    if (!state?.orchestratorModel) return
+    const [provider, modelId] = state.orchestratorModel.split("/")
+    const model = ctx.modelRegistry.find(provider, modelId)
+    if (model) {
+      const ok = await pi.setModel(model)
+      if (!ok) {
+        warn(
+          `orchestratorModel ${state.orchestratorModel} resolved but no API key is available; the orchestrator runs on the current session model.`,
+        )
+      }
+    } else {
+      warn(
+        `orchestratorModel ${state.orchestratorModel} is not in the model registry; the orchestrator runs on the current session model.`,
+      )
+    }
+  }
+
+  /**
+   * Enables or disables orchestrator mode. Toggling on requires a valid
+   * configuration (otherwise the toggle is refused with a notification).
+   */
+  const setMode = (ctx: ExtensionContext | ExtensionCommandContext, next: boolean): void => {
+    if (next && opts === null) reload(ctx)
+    if (next && opts === null) {
+      ctx.ui.notify(
+        "pi-agent-tree is not configured (missing subagentModel?). Fix the config and try again.",
+        "error",
+      )
+      return
+    }
+    modeOn = next
+    applyMode(ctx)
+    persistMode()
+    if (modeOn) {
+      void applyOrchestratorModel(ctx)
+      ctx.ui.notify(
+        "Orchestrator mode ON: hands-on tools are blocked; delegation via `task` is enforced. Press Ctrl+Shift+Tab to turn it off.",
+        "info",
+      )
+    } else {
+      ctx.ui.notify(
+        "Orchestrator mode OFF: hands-on tools are allowed again. Press Ctrl+Shift+Tab to re-enable.",
+        "info",
+      )
+    }
+  }
+
+  /** Shortcut handler: flip the mode. */
+  const toggleMode = (ctx: ExtensionContext): void => {
+    setMode(ctx, !modeOn)
+  }
+
   /** Restores a previously persisted mode (e.g. /agent-tree off) on resume. */
   const restoreMode = (ctx: ExtensionContext): void => {
     const entries = ctx.sessionManager.getEntries()
@@ -195,12 +275,14 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
   pi.on("session_start", async (_event, ctx) => {
     // Spawned subagent processes also load their options here — from the
     // parent-provided PI_AGENT_TREE_CONFIG env — so the task tool works in
-    // orchestrator levels. Everything below is top-level-only.
+    // orchestrator levels. The parent also propagates the mode so spawned
+    // orchestrator levels keep delegating after the parent toggled it on.
     const state = reload(ctx)
     if (!state) return
+    if (process.env[PI_MODE_ENV] === "on") modeOn = true
+    else if (process.env[PI_MODE_ENV] === "off") modeOn = false
     if (!isTopLevelProcess()) return
 
-    if (process.env[MODE_ENV] === "off") modeOn = false
     restoreMode(ctx)
 
     const agents = discoverAgents(ctx.cwd, state.agentScope).agents
@@ -225,47 +307,30 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
     }
 
     const { text } = formatAgentList(agents, 8)
-    console.log(
-      `[${PLUGIN_ID}] Orchestrator "${state.orchestratorAgent}" enabled (depth ${state.orchestratorDepth}); subagents -> ${state.subagentModel}; routed: ${targets.join(", ") || "none"}; agents: ${text}`,
-    )
-
-    if (state.orchestratorModel) {
-      const [provider, modelId] = state.orchestratorModel.split("/")
-      const model = ctx.modelRegistry.find(provider, modelId)
-      if (model) {
-        const ok = await pi.setModel(model)
-        if (!ok) {
-          warn(
-            `orchestratorModel ${state.orchestratorModel} resolved but no API key is available; the orchestrator runs on the current session model.`,
-          )
-        }
-      } else {
-        warn(
-          `orchestratorModel ${state.orchestratorModel} is not in the model registry; the orchestrator runs on the current session model.`,
-        )
-      }
+    const routed = targets.join(", ") || "none"
+    if (modeOn) {
+      console.log(
+        `[${PLUGIN_ID}] Orchestrator "${state.orchestratorAgent}" enabled (depth ${state.orchestratorDepth}); subagents -> ${state.subagentModel}; routed: ${routed}; agents: ${text}`,
+      )
+    } else {
+      console.log(
+        `[${PLUGIN_ID}] Orchestrator mode is off — press Ctrl+Shift+Tab (or run /agent-tree on) to enable; subagents -> ${state.subagentModel}; routed: ${routed}; agents: ${text}`,
+      )
     }
+
+    if (modeOn) await applyOrchestratorModel(ctx)
 
     applyMode(ctx)
   })
 
   pi.registerCommand("agent-tree", {
-    description: "Toggle orchestrator mode: /agent-tree on | off | status",
+    description: "Toggle orchestrator mode: /agent-tree | on | off | status",
     handler: async (args, ctx) => {
       const command = (args ?? "").trim().toLowerCase()
       if (command === "on") {
-        modeOn = true
-        applyMode(ctx)
-        persistMode()
-        ctx.ui.notify(
-          "Orchestrator mode ON: hands-on tools are blocked; delegation via `task` is enforced.",
-          "info",
-        )
+        setMode(ctx, true)
       } else if (command === "off") {
-        modeOn = false
-        applyMode(ctx)
-        persistMode()
-        ctx.ui.notify("Orchestrator mode OFF: hands-on tools are allowed again.", "info")
+        setMode(ctx, false)
       } else if (command === "status") {
         const state = getOpts()
         if (!state) {
@@ -279,14 +344,26 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
         const agents = discoverAgents(ctx.cwd, state.agentScope).agents
         const targets = routedTargets(state, agents)
         ctx.ui.notify(
-          `pi-agent-tree: mode=${modeOn ? "on" : "off"} role=${context.role}${context.role === "orchestrator" ? ` level=${context.level}/${context.depth}` : ""} subagentModel=${state.subagentModel} routed=${targets.join(", ") || "none"}`,
+          `pi-agent-tree: mode=${modeOn ? "on" : "off"} (press Ctrl+Shift+Tab to toggle) role=${context.role}${context.role === "orchestrator" ? ` level=${context.level}/${context.depth}` : ""} subagentModel=${state.subagentModel} routed=${targets.join(", ") || "none"}`,
           "info",
         )
       } else {
-        ctx.ui.notify(`Usage: /agent-tree on | off | status (currently ${modeOn ? "on" : "off"})`, "info")
+        setMode(ctx, !modeOn)
       }
     },
   })
+
+  // The quick toggle. `shift+tab` is pi's `app.thinking.cycle` by default and
+  // that binding is reserved (extension shortcuts conflicting with it are
+  // skipped), so the toggle registers two keys: `ctrl+shift+tab` works out of
+  // the box; `shift+tab` takes over as soon as the user moves `app.thinking.
+  // cycle` to another key in `~/.pi/agent/keybindings.json`.
+  for (const key of TOGGLE_KEYS) {
+    pi.registerShortcut(key, {
+      description: "Toggle pi-agent-tree orchestrator mode",
+      handler: toggleMode,
+    })
+  }
 
   pi.registerTool(taskTool(getOpts, () => modeOn))
 }

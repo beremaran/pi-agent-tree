@@ -48,6 +48,14 @@ export const PI_LEVEL_ENV = "PI_AGENT_TREE_LEVEL"
 export const PI_DEPTH_ENV = "PI_AGENT_TREE_DEPTH"
 
 /**
+ * Mode handed from the parent to spawned subagent processes. The mode is off
+ * by default now, so spawned orchestrator levels inherit the parent's toggle
+ * through this env var and keep delegating (workers ignore it: they have no
+ * `task` tool and are never treated as orchestrators).
+ */
+export const PI_MODE_ENV = "PI_AGENT_TREE_MODE"
+
+/**
  * Resolved options handed from the parent process to spawned subagent
  * processes. Children prefer this over file-based config so a delegation
  * always runs with exactly the options the parent validated, regardless of
@@ -425,11 +433,14 @@ export const buildSpawnPlan = async (
   context: LevelContext,
   plan: DelegationPlan,
   task: string,
+  modeOn: boolean,
 ): Promise<SpawnPlan> => {
   // Extension propagation: when the parent runs with -e, the child needs the
   // same flag so orchestrator levels get the task tool and the hard block.
   // Installed extensions (settings/packages) load automatically in children.
   const args = [...PROPAGATION_ARGS, "--mode", "json", "-p", "--no-session"]
+  // Children must honor the parent's mode toggle (the mode defaults to off).
+  const modeEnv = { [PI_MODE_ENV]: modeOn ? "on" : "off" }
 
   if (plan.kind === "worker") {
     const agent = plan.agent
@@ -446,7 +457,7 @@ export const buildSpawnPlan = async (
       kind: "worker",
       displayName: agent.name,
       args,
-      env: { [PI_ROLE_ENV]: "worker", [PI_CONFIG_ENV]: JSON.stringify(opts) },
+      env: { [PI_ROLE_ENV]: "worker", [PI_CONFIG_ENV]: JSON.stringify(opts), ...modeEnv },
     }
   }
 
@@ -470,6 +481,7 @@ export const buildSpawnPlan = async (
       [PI_LEVEL_ENV]: String(plan.level),
       [PI_DEPTH_ENV]: String(context.depth),
       [PI_CONFIG_ENV]: JSON.stringify(opts),
+      ...modeEnv,
     },
   }
 }
@@ -508,6 +520,7 @@ export const runDelegatedTask = async (
   discoveryCwd: string,
   signal: AbortSignal | undefined,
   onUpdate: AgentToolUpdateCallback | undefined,
+  modeOn: boolean,
 ): Promise<DelegationResult> => {
   const agents = discoverAgents(discoveryCwd, opts.agentScope).agents
   const plan = planDelegation(opts, context, agentName, agents)
@@ -528,7 +541,7 @@ export const runDelegatedTask = async (
     }
   }
 
-  const spawnPlan = await buildSpawnPlan(opts, context, plan, task)
+  const spawnPlan = await buildSpawnPlan(opts, context, plan, task, modeOn)
 
   const currentResult: TaskDetails = {
     agent: spawnPlan.displayName,
@@ -725,7 +738,7 @@ export const taskTool = (
         content: [
           {
             type: "text",
-            text: "Orchestrator mode is off (use `/agent-tree on`). The task tool is disabled.",
+            text: "Orchestrator mode is off (press Ctrl+Shift+Tab or run `/agent-tree on`). The task tool is disabled.",
           },
         ],
         details: {
@@ -750,6 +763,7 @@ export const taskTool = (
       ctx.cwd,
       signal,
       onUpdate,
+      isModeOn(),
     )
     return {
       content: [{ type: "text", text: result.content }],
