@@ -41,4 +41,15 @@ you control.
   unrestricted agent" loophole.
 - **`orchestratorModel` overrides the configured session model** (best effort).
 
+## Dev-toolchain dependency note (`undici`)
+
+`npm audit` reports advisories for `undici`, a **transitive dev-only
+dependency** pinned to `8.5.0` by `@earendil-works/pi-coding-agent`'s shipped
+`npm-shrinkwrap.json` (used only for typechecking; npm `overrides` cannot
+reach shrinkwrapped pins). The published package has **no runtime
+dependencies** — pi core packages are `peerDependencies` bundled by pi
+itself — so consumers of the extension never install this copy of `undici`.
+The findings affect the repository's dev toolchain only, and disappear when
+the pi core packages drop the affected pin.
+
 The README's Security section describes these same considerations in prose.
