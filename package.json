@@ -1,6 +1,6 @@
 {
   "name": "@beremaran/pi-agent-tree",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Force pi to act as an orchestrator: every task is decomposed and delegated to subagents via the task tool, with user-configurable models per agent.",
   "type": "module",
   "homepage": "https://github.com/beremaran/pi-agent-tree",
