@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Distribution is GitHub-only: removed the npm publish surface (`publishConfig`,
+  `files`, `main`/`types`/`exports`, `prepublishOnly`) and the npm publish
+  workflow. Releases are now tag-triggered GitHub Releases
+  (`.github/workflows/release.yml`); install via
+  `pi install git:github.com/beremaran/pi-agent-tree`.
+
 ## 0.1.0 - 2026-08-05
 
 ### Added
@@ -35,6 +45,6 @@
   pi; the extension logs and stays inert.
 - Full open-source documentation (README, CHANGELOG, LICENSE, CONTRIBUTING,
   SECURITY, CODE_OF_CONDUCT, RELEASING) and CI (typecheck/lint/test/smoke on
-  Node 22/24, tag-triggered npm publish with provenance + GitHub Release).
+  Node 22/24, tag-triggered release workflow creating the GitHub Release).
 - Tests: options normalization/validation, directive rendering (byte-exact),
   delegation routing/pinning, and a module smoke test.

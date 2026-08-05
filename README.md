@@ -33,13 +33,7 @@ the tools it would need to do the work directly are gone or denied.
 
 ## Installation
 
-As a pi package from npm:
-
-```bash
-pi install npm:@beremaran/pi-agent-tree
-```
-
-From git:
+As a pi package from git:
 
 ```bash
 pi install git:github.com/beremaran/pi-agent-tree
@@ -442,37 +436,30 @@ See [RELEASING.md](RELEASING.md) for the release process.
 
 ## Publishing
 
-Releases are **tag-triggered from CI**, not local `npm publish`:
+Releases are **tag-triggered from CI**, published on GitHub only (there is no
+npm package):
 
 ```bash
 git tag vX.Y.Z
 git push origin vX.Y.Z
 ```
 
-Pushing the tag runs `.github/workflows/publish.yml`, which:
+Pushing the tag runs `.github/workflows/release.yml`, which:
 
 1. Verifies the tag matches `package.json` and that `CHANGELOG.md` documents
    the released version.
 2. Installs dependencies and runs the full check suite (`npm run check`).
-3. Inspects the packed tarball and asserts it contains exactly the expected
-   files.
-4. Smoke-tests the tarball from a clean consumer install, importing the
-   package's extension entry and asserting the default and named exports are
-   functions.
-5. Publishes to npm using the `NPM_TOKEN` secret with npm provenance
-   (`publishConfig.provenance` + `id-token: write`).
-6. Creates a GitHub Release whose body is the CHANGELOG section for the
+3. Creates a GitHub Release whose body is the CHANGELOG section for the
    released version.
 
-**npm provenance requires the CI path and a `NPM_TOKEN` repository secret.**
-A local `npm publish` is not the supported flow: it will not produce
-provenance and bypasses the release checks. If you do run it,
-`prepublishOnly` runs `npm run check` first, but prefer the tag flow.
-Without the `NPM_TOKEN` secret the workflow skips `npm publish` and only
-creates the GitHub Release.
+Installation from GitHub works out of the box:
 
-The `types`/`main` entries point at the raw TypeScript source: pi loads
-extensions with jiti, so the package ships `.ts` directly with no build step.
+```bash
+pi install git:github.com/beremaran/pi-agent-tree
+```
+
+The extension is loaded with jiti directly from the raw TypeScript source, so
+there is no build step.
 
 ## License
 
