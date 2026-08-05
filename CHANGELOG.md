@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.2.0 - 2026-08-06
+
+### Changed (Breaking)
+
+- Orchestrator mode is **off by default**. The extension is inert until
+  enabled: no directive, no tool removal/blocking, and `task` refuses with
+  "Orchestrator mode is off". Enable with `Ctrl+Shift+Tab`, `/agent-tree on`,
+  or `PI_AGENT_TREE_MODE=on`; the mode toggle persists per session. The
+  `orchestratorModel` session-model switch is also gated on the mode now
+  (previously it applied at every session start).
+- `PI_AGENT_TREE_MODE=off` is now redundant (off is the default); the env var
+  is only needed to override an inherited `PI_AGENT_TREE_MODE=on`.
+
+### Added
+
+- Keyboard shortcut to toggle orchestrator mode: `Ctrl+Shift+Tab` works out of
+  the box; `Shift+Tab` is registered too and takes effect once
+  `app.thinking.cycle` is rebound in `~/.pi/agent/keybindings.json` (pi
+  reserves `Shift+Tab` for thinking-cycle and skips conflicting extension
+  shortcuts).
+- Bare `/agent-tree` (no arguments) toggles the mode like the shortcut;
+  `on`/`off`/`status` still work, and `status` now mentions the shortcut.
+- Spawned orchestrator levels inherit the parent's mode via
+  `PI_AGENT_TREE_MODE`, so deep chains keep delegating when the mode was
+  toggled on.
+
 ## 0.1.1 - 2026-08-05
 
 ### Changed
