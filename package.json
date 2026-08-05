@@ -1,0 +1,74 @@
+{
+  "name": "@beremaran/pi-agent-tree",
+  "version": "0.1.0",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "description": "Force pi to act as an orchestrator: every task is decomposed and delegated to subagents via the task tool, with user-configurable models per agent.",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "CHANGELOG.md"
+  ],
+  "homepage": "https://github.com/beremaran/pi-agent-tree",
+  "bugs": {
+    "url": "https://github.com/beremaran/pi-agent-tree/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "pi",
+    "extension",
+    "orchestrator",
+    "subagent",
+    "task",
+    "delegate",
+    "swarm"
+  ],
+  "author": "Berke Arslan <berke@beremaran.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/beremaran/pi-agent-tree.git"
+  },
+  "license": "MIT",
+  "funding": {
+    "github": "beremaran"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-ai": "*",
+    "@earendil-works/pi-agent-core": "*",
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-tui": "*",
+    "typebox": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test \"test/*.test.ts\"",
+    "test:coverage": "node --experimental-strip-types --test --experimental-test-coverage \"test/*.test.ts\"",
+    "test:smoke": "node test/smoke.mjs",
+    "lint": "biome check src test",
+    "check": "npm run typecheck && npm run lint && npm test && npm run test:smoke",
+    "prepublishOnly": "npm run check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.6",
+    "@earendil-works/pi-coding-agent": "^0.83.0",
+    "@types/node": "^26.1.2",
+    "typescript": "^5.6.0"
+  }
+}
