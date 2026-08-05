@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- All orchestrator directive levels (single-level and `orchestratorDepth` chains) now explicitly nudge small-chunk decomposition: subtasks must be small (one concern, few files, verifiable in one focused pass), monolith-to-single-subagent delegation is prohibited, and independent subtasks should fan out to several small subagents in parallel instead of one large delegation.
+
 ## 0.2.0 - 2026-08-06
 
 ### Changed (Breaking)
