@@ -25,6 +25,8 @@ Ask something that requires a tool, e.g.:
 
 > Create a file named test.txt containing "hello".
 
+Enable orchestrator mode first with `/agent-tree on` or `Ctrl+Shift+Tab`.
+
 Expected behavior:
 
 1. The orchestrator does **not** edit the file itself (hands-on tools are
@@ -33,11 +35,15 @@ Expected behavior:
 3. The subagent runs with the model configured in `subagentModel` (check the
    delegation's usage line in the TUI).
 
-Verify the startup log line is present:
+To test an enabled session from startup, launch Pi with
+`PI_AGENT_TREE_MODE=on pi -a -e ./src/index.ts`; verify the log line is present:
 
 ```
-Orchestrator "Manager" enabled; subagents -> <subagentModel>
+[@beremaran/pi-agent-tree] Orchestrator "Manager" enabled (depth 1); subagents -> <subagentModel>; routed: general, explore; agents: ...
 ```
+
+Without an explicit opt-in, the startup line says that orchestrator mode is
+off and the extension leaves the normal Pi toolset unchanged.
 
 ## Writing tests
 

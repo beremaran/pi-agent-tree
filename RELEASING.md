@@ -1,9 +1,9 @@
 # Releasing
 
-Releases are **tag-triggered from CI**, published on GitHub only — there is no
-npm package. Pushing a `vX.Y.Z` tag runs `.github/workflows/release.yml`, which
-runs the check suite and creates a GitHub Release whose body is the CHANGELOG
-section for the version.
+Releases are **tag-triggered from CI** and published on GitHub only; this
+package is not published to npm. Pushing a `vX.Y.Z` tag runs
+`.github/workflows/release.yml`, which runs the check suite and creates a
+GitHub Release whose body is the CHANGELOG section for the version.
 
 ## Steps
 
@@ -18,7 +18,7 @@ section for the version.
 3. **Commit** the changes on `main`:
 
    ```bash
-   git add package.json CHANGELOG.md
+   git add package.json package-lock.json CHANGELOG.md
    git commit -m "chore: release vX.Y.Z"
    git push origin main
    ```

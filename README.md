@@ -1,13 +1,13 @@
 # @beremaran/pi-agent-tree
 
-A [pi](https://pi.dev) extension that can turn the model into an
+A [pi](https://pi.dev) package containing an extension that can turn the model into
 **orchestrator** on demand: while the mode is on, every request is decomposed
 into **small subtasks** and **delegated to subagents via the `task` tool**, never
 done by the orchestrator itself. You decide which model powers the subagents and which
 powers the orchestrator. The mode is **off by default** and toggled with
 `Ctrl+Shift+Tab`.
 
-> **Port:** this is a faithful port of the
+> **Pi package:** this is not an OpenCode plugin. It is a faithful Pi-native port of the
 > [@beremaran/opencode-agent-tree](https://github.com/beremaran/opencode-agent-tree)
 > opencode plugin. The enforcement model (prompt directive + hard tool block +
 > model routing + structural delegation pinning) carries over; the mechanics
@@ -18,6 +18,8 @@ powers the orchestrator. The mode is **off by default** and toggled with
 - Ships built-in subagents (`general`, `explore`) plus every agent you define in
   `~/.pi/agent/agents/*.md` or `.pi/agents/*.md`.
 - Enforcement is layered: prompt directive + active-tool removal + hard tool block.
+- The `pi` manifest loads `./src/index.ts` as the only extension; this package
+  ships no skills, prompt templates, or themes.
 
 ## How it forces orchestration
 
@@ -36,20 +38,49 @@ Three independent enforcement layers:
 If a model ever ignores the directive, layers 2 and 3 still make it delegate:
 the tools it would need to do the work directly are gone or denied.
 
+## Requirements
+
+- A current Pi release with package and extension support.
+- Node.js **22.19.0 or newer**. This repository is tested on Node 22 and 24.
+
+Pi loads the extension's TypeScript source directly through its extension
+loader; there is no build step.
+
 ## Installation
 
-As a pi package from git:
+Install globally from GitHub:
 
 ```bash
 pi install git:github.com/beremaran/pi-agent-tree
 ```
 
-Or as a local extension (for development — see
-[Development](#development)):
+To install it only for the current project, write the package entry to
+`.pi/settings.json` with `-l`:
+
+```bash
+pi install -l git:github.com/beremaran/pi-agent-tree
+```
+
+For a local checkout, load the extension directly while developing (from the
+repository root):
 
 ```bash
 pi -e ./src/index.ts
 ```
+
+The package manifest is the following `package.json` entry:
+
+```json
+{
+  "pi": {
+    "extensions": ["./src/index.ts"]
+  }
+}
+```
+
+It registers one extension and no theme, skill, or prompt-template resources.
+Installing from GitHub is the supported distribution path; npm publication is
+not required.
 
 > Config is read at session start. **Start a new session (or `/reload`) after
 > changing the config file.**
@@ -178,9 +209,10 @@ Your repo-specific worker instructions go here.
 ```
 
 **Locations:**
-- `~/.pi/agent/agents/*.md` — user-level (always loaded)
-- `.pi/agents/*.md` — project-level (only with `agentScope: "project"` or
-  `"both"`; see [Options](#options))
+- `~/.pi/agent/agents/*.md` — user-level (loaded for `agentScope: "user"` or
+  `"both"`; default: `"user"`)
+- `.pi/agents/*.md` — project-level (loaded only with `agentScope: "project"` or
+  `"both"`; the project must be trusted)
 
 Project agents override user agents with the same name; user agents override
 the built-in `general`/`explore` with the same name.
@@ -190,11 +222,11 @@ the built-in `general`/`explore` with the same name.
 | Option | Type | Default | Description |
 | ------ | ---- | ------- | ----------- |
 | `subagentModel` | `string` | **required** | Model for all delegated work, e.g. `"huggingface/deepseek-v4-flash"`. Must be `provider/model` format. Agents with an explicit `model` in their agent file are never overridden. See [Model precedence](#model-precedence). |
-| `orchestratorModel` | `string` | — | Model for the orchestrator. At the top level this best-effort switches the session model at start; for spawned orchestrator levels (depth > 1) it is passed to the level processes. |
+| `orchestratorModel` | `string` | — | Model for the orchestrator. When mode is on, the top level best-effort switches the session model; spawned orchestrator levels (depth > 1) receive it directly. |
 | `orchestratorAgent` | `string` | `"Manager"` | Base name of the orchestrator. With `orchestratorDepth > 1` the chain levels are named `<orchestratorAgent>-2`, `<orchestratorAgent>-3`, ... |
 | `orchestratorDepth` | `number` | `1` | How many orchestrator levels form the delegation chain. Intermediate levels can only delegate to the next level; only the final level's subagents have hands-on tools. See [Deep orchestration](#deep-orchestration). |
-| `orchestratorModels` | `string[]` | — | Per-level orchestrator models. Entry `i` applies to level `i+1` (`[0]` → "Manager", `[1]` → "Manager-2", ...). A shorter array leaves deeper levels on `orchestratorModel`. Entries must be `provider/model`; length must not exceed `orchestratorDepth`. |
-| `agents` | `string[]` | all discovered agents | Only these agents get `subagentModel`. Orchestrator level names are never routed. Names that match no agent file (and are not built-ins) trigger a typo warning. |
+| `orchestratorModels` | `string[]` | — | Per-level orchestrator models. Entry `i` applies to level `i+1` (`[0]` → "Manager", `[1]` → "Manager-2", ...). A shorter array falls back to `orchestratorModel`, then Pi's default model. Entries must be `provider/model`; length must not exceed `orchestratorDepth`. |
+| `agents` | `string[]` | all discovered agents | Only these agents are eligible as routed delegation targets. Orchestrator level names are never routed. Names that match no agent file (and are not built-ins) trigger a typo warning. |
 | `agentModels` | `Record<string,string>` | `{}` | Per-agent overrides, wins over `subagentModel`. Never applies to orchestrator levels. |
 | `instructions` | `string` | — | Extra rules appended verbatim to the level-1 orchestrator system prompt. |
 | `blockedTools` | `string[]` | `["edit", "bash"]` | Tools hard-blocked for every orchestrator level. `[]` = prompt-only enforcement. Names must match `[a-z0-9_-]+`. In pi, `edit` also covers `write` (see below). |
@@ -225,8 +257,8 @@ The effective model for a delegated subagent is resolved in this order:
 
 The orchestrator is asymmetric:
 
-- `orchestratorModel` **best-effort overrides** the session model at start
-  (and always applies to spawned orchestrator levels).
+- `orchestratorModel` **best-effort overrides** the session model when
+  orchestrator mode is enabled (and applies to spawned orchestrator levels).
 - With `orchestratorDepth > 1`, each level's model resolves as
   `orchestratorModels[i]` → `orchestratorModel` → the level's default model.
 - `agentModels` is **never** applied to orchestrator levels.
@@ -263,14 +295,14 @@ Enforcement in the chain:
   delegates to the routed subagents. `restrictTask: true` pins its `task`
   targets to exactly those routed agents; without it, any discovered agent is
   an acceptable target.
-- **Every level defaults to `orchestratorModel`** (or a per-level
-  `orchestratorModels[i]` entry) and the blocked hands-on tools. Spawned
+- **Each level uses `orchestratorModels[i]`, then `orchestratorModel`, then
+  Pi's default model**, along with the blocked hands-on tools. Spawned
   levels receive only the read-only + `task` toolset via the `--tools` flag,
   and the role markers (`PI_AGENT_TREE_ROLE/LEVEL/DEPTH`) keep the extension
   enforcing the block without double-installing the directive.
-- **`orchestratorModel` at the top level is best-effort**: the extension tries
-  `pi.setModel()` at session start and warns if the model is unavailable or has
-  no API key.
+- **`orchestratorModel` at the top level is best-effort**: when mode is enabled,
+  the extension tries `pi.setModel()` and warns if the model is unavailable or
+  has no API key.
 
 **Cost caveat:** every added level multiplies LLM model calls and tokens —
 each level re-plans, writes briefs, and reviews the level below it. Depth 3+
@@ -403,7 +435,7 @@ The port keeps the enforcement model; the mechanics differ where pi does:
 
 ## Limitations
 
-- Enforcement is prompt + tool-removal + permission based. Non-compliant
+- Enforcement is prompt + active-tool removal + an explicit tool-call block. Non-compliant
   models can still cut corners — for example doing their own research instead
   of delegating — where the block does not forbid the action.
 - Every delegation spawns a fresh pi process; subagents cannot be resumed by
@@ -465,9 +497,13 @@ npm run check   # typecheck + lint + tests + smoke
 ```
 
 The extension is a single `src/index.ts` entry (plus helpers in `src/`). To
-verify against a live pi, run from a directory with a `.pi/pi-agent-tree.json`
-config and watch for the startup log line (then press `Ctrl+Shift+Tab` to
+verify against a live Pi, run from the repository root with the project config
+trusted and watch for the startup log line (then press `Ctrl+Shift+Tab` to
 enable the mode):
+
+```bash
+pi -a -e ./src/index.ts
+```
 
 ```
 [@beremaran/pi-agent-tree] Orchestrator mode is off — press Ctrl+Shift+Tab (or run /agent-tree on) to enable; subagents -> <subagentModel>
@@ -475,10 +511,10 @@ enable the mode):
 
 See [RELEASING.md](RELEASING.md) for the release process.
 
-## Publishing
+## Release process
 
-Releases are **tag-triggered from CI**, published on GitHub only (there is no
-npm package):
+Releases are **tag-triggered from CI** and published on GitHub only; this
+package is not published to npm:
 
 ```bash
 git tag vX.Y.Z
