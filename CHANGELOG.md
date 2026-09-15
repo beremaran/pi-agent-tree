@@ -45,9 +45,7 @@
 
 ### Changed
 
-- Distribution is GitHub-only: removed the npm publish surface (`publishConfig`,
-  `files`, `main`/`types`/`exports`, `prepublishOnly`) and the npm publish
-  workflow. Releases are now tag-triggered GitHub Releases
+- Distribution is GitHub-only: releases are now tag-triggered GitHub Releases
   (`.github/workflows/release.yml`); install via
   `pi install git:github.com/beremaran/pi-agent-tree`.
 

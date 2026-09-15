@@ -1,7 +1,7 @@
 # Releasing
 
-Releases are **tag-triggered from CI** and published on GitHub only; this
-package is not published to npm. Pushing a `vX.Y.Z` tag runs
+Releases are **tag-triggered from CI** and published on GitHub. Pushing a
+`vX.Y.Z` tag runs
 `.github/workflows/release.yml`, which runs the check suite and creates a
 GitHub Release whose body is the CHANGELOG section for the version.
 

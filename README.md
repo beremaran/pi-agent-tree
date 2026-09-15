@@ -79,8 +79,7 @@ The package manifest is the following `package.json` entry:
 ```
 
 It registers one extension and no theme, skill, or prompt-template resources.
-Installing from GitHub is the supported distribution path; npm publication is
-not required.
+Installing from GitHub is the supported distribution path.
 
 > Config is read at session start. **Start a new session (or `/reload`) after
 > changing the config file.**
@@ -513,8 +512,7 @@ See [RELEASING.md](RELEASING.md) for the release process.
 
 ## Release process
 
-Releases are **tag-triggered from CI** and published on GitHub only; this
-package is not published to npm:
+Releases are **tag-triggered from CI** and published on GitHub only:
 
 ```bash
 git tag vX.Y.Z

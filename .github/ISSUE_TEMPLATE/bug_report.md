@@ -34,4 +34,4 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: OS, node version, how the extension was installed (npm package, git, `-e`, `~/.pi/agent/extensions`).
+      description: OS, node version, how the extension was installed (git, `-e`, `~/.pi/agent/extensions`).
