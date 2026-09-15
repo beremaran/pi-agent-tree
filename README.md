@@ -5,7 +5,7 @@ A [pi](https://pi.dev) package containing an extension that can turn the model i
 into **small subtasks** and **delegated to subagents via the `task` tool**, never
 done by the orchestrator itself. You decide which model powers the subagents and which
 powers the orchestrator. The mode is **off by default** and toggled with
-`Ctrl+Shift+Tab`.
+`Ctrl+Shift+Space`.
 
 > **Pi package:** this is not an OpenCode plugin. It is a faithful Pi-native port of the
 > [@beremaran/opencode-agent-tree](https://github.com/beremaran/opencode-agent-tree)
@@ -159,18 +159,18 @@ Two substitutions happen at runtime:
 3. Start a pi session. The startup log line reports what was routed:
 
    ```
-   [@beremaran/pi-agent-tree] Orchestrator mode is off — press Ctrl+Shift+Tab (or run /agent-tree on) to enable; subagents -> huggingface/deepseek-v4-flash; routed: general, explore
+   [@beremaran/pi-agent-tree] Orchestrator mode is off — press Ctrl+Shift+Space (or run /agent-tree on) to enable; subagents -> huggingface/deepseek-v4-flash; routed: general, explore
    ```
 
-4. Enable orchestrator mode with **`Ctrl+Shift+Tab`** (or `/agent-tree on`).
+4. Enable orchestrator mode with **`Ctrl+Shift+Space`** (or `/agent-tree on`).
    The footer shows `🪜 orchestrator` while the mode is on.
 5. Ask for something that requires a tool, e.g. "create a file named test.txt
    containing 'hello'". The orchestrator will delegate it via `task` — it will
    not edit the file itself.
 
 The extension is **off by default**: installing it never changes an existing
-session's behavior. Turn it on with `Ctrl+Shift+Tab` (or `/agent-tree on`);
-`Ctrl+Shift+Tab` toggles it back off (`/agent-tree off`, `/agent-tree status`
+session's behavior. Turn it on with `Ctrl+Shift+Space` (or `/agent-tree on`);
+`Ctrl+Shift+Space` toggles it back off (`/agent-tree off`, `/agent-tree status`
 for the current state). The toggle persists per session — resuming a session
 restores the mode it had. `PI_AGENT_TREE_MODE=on` in the environment starts
 every new session with the mode on.
@@ -179,18 +179,8 @@ every new session with the mode on.
 
 The mode toggle is bound to:
 
-- **`Ctrl+Shift+Tab`** — works out of the box.
-- **`Shift+Tab`** — also registered, but pi binds `Shift+Tab` to
-  `app.thinking.cycle` by default and that binding is reserved: extension
-  shortcuts conflicting with it are skipped. To hand `Shift+Tab` to this
-  extension, move the thinking-cycle binding in
-  `~/.pi/agent/keybindings.json`, e.g.:
-
-  ```json
-  { "app.thinking.cycle": "ctrl+shift+space" }
-  ```
-
-  After a reload, `Shift+Tab` toggles the orchestrator mode.
+- **`Ctrl+Shift+Space`** — the default toggle.
+- **`Ctrl+Shift+Tab`** — retained as a compatibility alias.
 
 ### Defining your own subagents
 
@@ -428,7 +418,7 @@ The port keeps the enforcement model; the mechanics differ where pi does:
   pi tool names (see above).
 - **Mode is off by default and toggled with a keyboard shortcut.** opencode's
   plugin is always on; here the orchestrator mode starts **off** and is enabled
-  with `Ctrl+Shift+Tab` (or `/agent-tree on`, or `PI_AGENT_TREE_MODE=on`). The
+  with `Ctrl+Shift+Space` (or `/agent-tree on`, or `PI_AGENT_TREE_MODE=on`). The
   `/agent-tree` command also supports `off`/`status`; a bare `/agent-tree`
   toggles like the shortcut. The state persists across sessions.
 
@@ -451,10 +441,10 @@ The port keeps the enforcement model; the mechanics differ where pi does:
   session start; `/reload` also re-reads them.
 - **Check the startup log line.** A healthy load logs the config and routed
   agents, e.g.
-  `Orchestrator mode is off — press Ctrl+Shift+Tab (or run /agent-tree on) to
+  `Orchestrator mode is off — press Ctrl+Shift+Space (or run /agent-tree on) to
   enable; subagents -> <subagentModel>`.
 - **"Orchestrator mode is off" from the `task` tool** means the mode is
-  disabled (it is off by default). Press `Ctrl+Shift+Tab` or run
+  disabled (it is off by default). Press `Ctrl+Shift+Space` or run
   `/agent-tree on`; the `task` tool only works while the mode is on.
 - **"pi-agent-tree is not configured" from the `task` tool** means
   `subagentModel` is missing (or the project config was ignored because the
@@ -473,7 +463,7 @@ The port keeps the enforcement model; the mechanics differ where pi does:
   it are ignored. For subagents, an explicit `model` in the agent file wins
   over `agentModels` and `subagentModel` by design.
 - **Tools are missing after toggling the mode** — the extension restores the
-  captured toolset when you toggle the mode off (`Ctrl+Shift+Tab` or
+  captured toolset when you toggle the mode off (`Ctrl+Shift+Space` or
   `/agent-tree off`); if another extension changed the toolset in between,
   restore them manually via your other extension's toggle.
 
@@ -497,7 +487,7 @@ npm run check   # typecheck + lint + tests + smoke
 
 The extension is a single `src/index.ts` entry (plus helpers in `src/`). To
 verify against a live Pi, run from the repository root with the project config
-trusted and watch for the startup log line (then press `Ctrl+Shift+Tab` to
+trusted and watch for the startup log line (then press `Ctrl+Shift+Space` to
 enable the mode):
 
 ```bash
@@ -505,7 +495,7 @@ pi -a -e ./src/index.ts
 ```
 
 ```
-[@beremaran/pi-agent-tree] Orchestrator mode is off — press Ctrl+Shift+Tab (or run /agent-tree on) to enable; subagents -> <subagentModel>
+[@beremaran/pi-agent-tree] Orchestrator mode is off — press Ctrl+Shift+Space (or run /agent-tree on) to enable; subagents -> <subagentModel>
 ```
 
 See [RELEASING.md](RELEASING.md) for the release process.

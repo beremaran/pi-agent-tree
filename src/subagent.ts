@@ -738,7 +738,7 @@ export const taskTool = (
         content: [
           {
             type: "text",
-            text: "Orchestrator mode is off (press Ctrl+Shift+Tab or run `/agent-tree on`). The task tool is disabled.",
+            text: "Orchestrator mode is off (press Ctrl+Shift+Space or run `/agent-tree on`). The task tool is disabled.",
           },
         ],
         details: {

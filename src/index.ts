@@ -7,9 +7,7 @@
  * tools are hard-blocked).
  *
  * Mode is **off by default**: the extension is inert until enabled with
- * `Ctrl+Shift+Tab`, `/agent-tree on`, or `PI_AGENT_TREE_MODE=on`. `Shift+Tab`
- * is also registered and takes effect once pi's `app.thinking.cycle` binding
- * is moved (pi reserves `Shift+Tab` for it).
+ * `Ctrl+Shift+Space`, `/agent-tree on`, or `PI_AGENT_TREE_MODE=on`.
  *
  * Configuration is read from JSON files (merged, project wins when trusted):
  * - ~/.pi/agent/pi-agent-tree.json   (global)
@@ -54,10 +52,8 @@ import {
 const CONFIG_FILE = "pi-agent-tree.json"
 const STATE_ENTRY_TYPE = "agent-tree"
 
-/** Keys the toggle is registered on. `shift+tab` only wins once the user
- *  rebinds pi's `app.thinking.cycle` away from it (it is a reserved built-in
- *  binding and extension shortcuts conflicting with it are skipped). */
-const TOGGLE_KEYS = [Key.ctrlShift("tab"), Key.shift("tab")] as const
+/** Default toggle plus the previous default as a compatibility alias. */
+const TOGGLE_KEYS = [Key.ctrlShift("space"), Key.ctrlShift("tab")] as const
 
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
@@ -216,12 +212,12 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
     if (modeOn) {
       void applyOrchestratorModel(ctx)
       ctx.ui.notify(
-        "Orchestrator mode ON: hands-on tools are blocked; delegation via `task` is enforced. Press Ctrl+Shift+Tab to turn it off.",
+        "Orchestrator mode ON: hands-on tools are blocked; delegation via `task` is enforced. Press Ctrl+Shift+Space to turn it off.",
         "info",
       )
     } else {
       ctx.ui.notify(
-        "Orchestrator mode OFF: hands-on tools are allowed again. Press Ctrl+Shift+Tab to re-enable.",
+        "Orchestrator mode OFF: hands-on tools are allowed again. Press Ctrl+Shift+Space to re-enable.",
         "info",
       )
     }
@@ -314,7 +310,7 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
       )
     } else {
       console.log(
-        `[${PLUGIN_ID}] Orchestrator mode is off — press Ctrl+Shift+Tab (or run /agent-tree on) to enable; subagents -> ${state.subagentModel}; routed: ${routed}; agents: ${text}`,
+        `[${PLUGIN_ID}] Orchestrator mode is off — press Ctrl+Shift+Space (or run /agent-tree on) to enable; subagents -> ${state.subagentModel}; routed: ${routed}; agents: ${text}`,
       )
     }
 
@@ -344,7 +340,7 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
         const agents = discoverAgents(ctx.cwd, state.agentScope).agents
         const targets = routedTargets(state, agents)
         ctx.ui.notify(
-          `pi-agent-tree: mode=${modeOn ? "on" : "off"} (press Ctrl+Shift+Tab to toggle) role=${context.role}${context.role === "orchestrator" ? ` level=${context.level}/${context.depth}` : ""} subagentModel=${state.subagentModel} routed=${targets.join(", ") || "none"}`,
+          `pi-agent-tree: mode=${modeOn ? "on" : "off"} (press Ctrl+Shift+Space to toggle) role=${context.role}${context.role === "orchestrator" ? ` level=${context.level}/${context.depth}` : ""} subagentModel=${state.subagentModel} routed=${targets.join(", ") || "none"}`,
           "info",
         )
       } else {
@@ -353,11 +349,8 @@ export const OrchestratorExtension = (pi: ExtensionAPI): void => {
     },
   })
 
-  // The quick toggle. `shift+tab` is pi's `app.thinking.cycle` by default and
-  // that binding is reserved (extension shortcuts conflicting with it are
-  // skipped), so the toggle registers two keys: `ctrl+shift+tab` works out of
-  // the box; `shift+tab` takes over as soon as the user moves `app.thinking.
-  // cycle` to another key in `~/.pi/agent/keybindings.json`.
+  // The quick toggle uses a non-conflicting default and keeps the previous
+  // default as a compatibility alias.
   for (const key of TOGGLE_KEYS) {
     pi.registerShortcut(key, {
       description: "Toggle pi-agent-tree orchestrator mode",

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.2 - 2026-09-15
+
+### Changed
+
+- `Ctrl+Shift+Space` is now the default orchestrator-mode toggle.
+- `Ctrl+Shift+Tab` remains available as a compatibility alias.
+- Removed the conflicting `Shift+Tab` extension shortcut registration.
+
 ## 0.3.1 - 2026-09-15
 
 ### Changed

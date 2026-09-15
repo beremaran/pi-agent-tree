@@ -1,6 +1,6 @@
 {
   "name": "@beremaran/pi-agent-tree",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Pi extension that enforces task delegation through an on-demand orchestrator with configurable subagent models and agent routing.",
   "type": "module",
   "homepage": "https://github.com/beremaran/pi-agent-tree#readme",
