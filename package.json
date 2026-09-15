@@ -45,9 +45,9 @@
     "check": "npm run typecheck && npm run lint && npm test && npm run test:smoke"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.6",
-    "@earendil-works/pi-coding-agent": "^0.83.0",
-    "@types/node": "^26.1.2",
-    "typescript": "^5.6.0"
+    "@biomejs/biome": "^2.5.13",
+    "@earendil-works/pi-coding-agent": "^0.85.1",
+    "@types/node": "^26.5.1",
+    "typescript": "^7.0.2"
   }
 }
