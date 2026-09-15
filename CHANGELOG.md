@@ -1,11 +1,13 @@
 # Changelog
 
-## [Unreleased]
+## 0.3.1 - 2026-09-15
 
 ### Changed
 
 - Updated Pi installation, runtime, manifest, extension/theme, and package
   metadata documentation.
+
+## [Unreleased]
 
 ## 0.3.0 - 2026-08-06
 
